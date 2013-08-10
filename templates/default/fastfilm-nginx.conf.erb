@@ -1,0 +1,7 @@
+upstream fastfilm {
+  server <%= @host -%>:<%= @backend_port -%>;
+}
+
+server {
+  listen <%= @http_port -%>;
+}

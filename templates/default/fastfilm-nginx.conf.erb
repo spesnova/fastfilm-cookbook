@@ -1,7 +1,18 @@
 upstream fastfilm {
-  server <%= @host -%>:<%= @backend_port -%>;
+  server unix:/opt/fastfilm/shared/pids/nginx-rails.sock;
+  #server 8000;
 }
 
 server {
-  listen <%= @http_port -%>;
+  listen 80;
+  server_name fastfilm.info;
+
+  root /opt/fastfilm/current/public;
+
+  location / {
+    if (!-f $request_filename){
+      proxy_pass http://fastfilm;
+      break;
+    }
+  }
 }

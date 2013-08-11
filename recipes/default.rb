@@ -1,16 +1,16 @@
-# 
+#
 # Author:: Seigo Uchida (<spesnova@gmail.com>)
 # Cookbook Name:: fastfilm
 # Recipe:: default
 #
 # Copyright (C) 2013 Seigo Uchida
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #    http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -108,35 +108,44 @@ end
 end
 
 # Setup nginx
-#include_recipe "nginx"
-#
-#file "/etc/nginx/sites-enabled/default" do
-#  action :delete
-#end
-#
-#service "nginx" do
-#  action :stop
-#  supports :status => true, :restart => true, :reload => true
-#end
+include_recipe "nginx"
 
-#template "#{node["fastfilm"]["base_path"]}/fastfilm-nginx.conf" do
-#  user node["fastfilm"]["user"]
-#  group node["fastfilm"]["user"]
-#  source "fastfilm-nginx.conf.erb"
-#  variables(:host => node["fastfilm"]["host"],
-#            :base_path => node["fastfilm"]["deploy_to"],
-#            :http_port => node["fastfilm"]["port"],
-#            :backend_port => node["fastfilm"]["backend_port"])
-#  notifies :restart, "service['nginx']", :delayed
-#end
-#
-#link "/etc/nginx/sites-available/fastfilm.conf" do
-#  to "#{node['fastfilm']['base_path']}/fastfilm-nginx.conf"
-#end
-#
-#link "/etc/nginx/sites-enabled/fastfilm.conf" do
-#  to "/etc/nginx/sites-available/fastfilm.conf"
-#end
+file "/etc/nginx/sites-enabled/default" do
+ action :delete
+end
+
+file "/etc/nginx/sites-enabled/000-default" do
+  action :delete
+end
+
+%w{ default.conf  ssl.conf  virtual.conf }.each do |f|
+  file "/etc/nginx/conf.d/#{f}" do
+    action :delete
+  end
+end
+
+service "nginx" do
+ supports :status => true, :restart => true, :reload => true
+end
+
+template "#{node["fastfilm"]["deploy_to"]}/shared/config/fastfilm-nginx.conf" do
+ user node["fastfilm"]["user"]
+ group node["fastfilm"]["user"]
+ source "fastfilm-nginx.conf.erb"
+ variables(:host => node["fastfilm"]["host"],
+           :base_path => node["fastfilm"]["deploy_to"],
+           :http_port => node["fastfilm"]["port"],
+           :backend_port => node["fastfilm"]["backend_port"])
+ notifies :restart, "service[nginx]", :delayed
+end
+
+link "/etc/nginx/sites-available/fastfilm.conf" do
+ to "#{node['fastfilm']['deploy_to']}/shared/config/fastfilm-nginx.conf"
+end
+
+link "/etc/nginx/sites-enabled/fastfilm.conf" do
+ to "/etc/nginx/sites-available/fastfilm.conf"
+end
 
 # Setup unicorn
 include_recipe "unicorn"
@@ -144,6 +153,7 @@ include_recipe "unicorn"
 # TODO add notifies attribute that notify restart unicorn
 unicorn_config "#{node['fastfilm']['deploy_to']}/shared/config/unicorn.rb" do
   listen({ node["unicorn"]["port"] => { :tcp_nodelay => true, :backlog => 100 }})
+  #listen({ node["unicorn"]["port"] => "/opt/fastfilm/shared/pid/nginx-rails.sock" })
   worker_processes node["unicorn"]["worker_processes"]
   worker_timeout node["unicorn"]["worker_timeout"]
   preload_app node["unicorn"]["preload_app"]
@@ -167,19 +177,19 @@ end
 
 # create ssh wrapper
 directory "/tmp/private_code/.ssh" do
-  owner "root"
+  owner node["fastfilm"]["user"]
   recursive true
 end
 
 cookbook_file "/tmp/private_code/wrap-ssh4git.sh" do
   source "wrap-ssh4git.sh"
-  owner "root"
+  owner node["fastfilm"]["user"]
   mode "0700"
 end
 
 file "/tmp/private_code/.ssh/deploy.id_rsa" do
-  owner "root"
-  mode "0700"
+  owner node["fastfilm"]["user"]
+  mode "0600"
   content data_bag_item("fastfilm", "deploy")["key"]
 end
 
@@ -223,12 +233,13 @@ deploy_revision node["fastfilm"]["deploy_to"] do
         --path #{node["fastfilm"]["deploy_to"]}/shared/bundle \
         > /tmp/bundle.log
       CMD
-      user "root"
+      user node["fastfilm"]["user"]
       cwd release_path
       action :run
     end
     execute "asset precompile" do
       command "bundle exec rake assets:precompile RAILS_ENV=production"
+      user node["fastfilm"]["user"]
       cwd release_path
       action :run
     end

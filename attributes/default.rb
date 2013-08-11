@@ -18,15 +18,17 @@
 # limitations under the License.
 #
 
-default["fastfilm"]["user"]      = "root"
-default["fastfilm"]["deploy_to"] = "/opt/fastfilm"
-default["fastfilm"]["repo"]      = "git@github.com:spesnova/fastfilm.git"
-default["fastfilm"]["revision"]  = "master"
-default["fastfilm"]["port"]      = "80"
-default["fastfilm"]["domain"]    = "fastfilm.example.com"
+default["fastfilm"]["user"]         = "fastfilm"
+default["fastfilm"]["group"]        = "fastfilm"
+default["fastfilm"]["deploy_to"]    = "/opt/fastfilm"
+default["fastfilm"]["repo"]         = "git@github.com:spesnova/fastfilm.git"
+default["fastfilm"]["revision"]     = "83fb547e80c65b33390e70ba574a0c55b78c0ed5"
+default["fastfilm"]["port"]         = "80"
+default["fastfilm"]["backend_port"] = "#{node['fastfilm']['deploy_to']}/shared/pids/nginx-rails.sock"
+default["fastfilm"]["domain"]       = "fastfilm.info"
 
 # Unicorn setting
-default["unicorn"]["port"]             = default["fastfilm"]["port"]
+default["unicorn"]["port"]             = default["fastfilm"]["backend_port"]
 default["unicorn"]["options"]          = { :tcp_nodelay => true, :backlog => 100 }
 default["unicorn"]["worker_processes"] = [node[:cpu][:total].to_i * 4, 8].min
 default["unicorn"]["worker_timeout"]   = "30"
@@ -47,7 +49,7 @@ ActiveRecord::Base.establish_connection
 
   begin
     uid, gid = Process.euid, Process.egid
-    user, group = "#{node['fastfilm']['user']}", "#{node['fastfilm']['user']}"
+    user, group = "#{node['fastfilm']['user']}", "#{node['fastfilm']['group']}"
     target_uid = Etc.getpwnam(user).uid
     target_gid = Etc.getgrnam(group).gid
     worker.tmp.chown(target_uid, target_gid)
@@ -76,7 +78,3 @@ default['mysql']['tunable']['character-set-server'] = "utf8"
 default["mysql"]["server_root_password"]   = nil
 default["mysql"]["server_repl_password"]   = nil
 default["mysql"]["server_debian_password"] = nil
-
-# Nginx
-default["fastfilm"]["host"]         = "localhost"
-default["fastfilm"]["backend_port"] = 8000

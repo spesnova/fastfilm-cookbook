@@ -274,3 +274,11 @@ execute "start unicorn" do
   not_if { ::File.exists?("#{node["fastfilm"]["deploy_to"]}/shared/pids/unicorn.pid") }
   action :run
 end
+
+
+## FIXME
+%w{ bg_header.png bg_footer.png icon.png }.each do |f|
+  link "#{node['fastfilm']['deploy_to']}/current/public/assets/#{f}" do
+    to "#{node['fastfilm']['deploy_to']}/current/app/assets/images/#{f}"
+  end
+end

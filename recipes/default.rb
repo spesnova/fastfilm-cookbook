@@ -280,5 +280,7 @@ end
 %w{ bg_header.png bg_footer.png icon.png }.each do |f|
   link "#{node['fastfilm']['deploy_to']}/current/public/assets/#{f}" do
     to "#{node['fastfilm']['deploy_to']}/current/app/assets/images/#{f}"
+    owner node["fastfilm"]["user"]
+    group node["fastfilm"]["group"]
   end
 end

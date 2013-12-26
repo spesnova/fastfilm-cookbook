@@ -1,12 +1,5 @@
-# fastfilm cookbook
-
-# Requirements
-
-# Usage
-
-# Attributes
-
-# Recipes
+# Description
+Cookbook for fastfile app.
 
 # Author
 
